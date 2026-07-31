@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Quiz Hall</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0F1B2D;
+    --paper:#16243B;
+    --paper-light:#1E304C;
+    --amber:#FFB130;
+    --mint:#6EE7B7;
+    --red:#F87171;
+    --text:#EAEFF7;
+    --muted:#8FA3C0;
+    --line: rgba(234,239,247,0.12);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: var(--ink);
+    background-image:
+      radial-gradient(circle at 15% 10%, rgba(255,177,48,0.06), transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(110,231,183,0.05), transparent 40%);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding: 24px;
+  }
+  .stage{
+    width: 100%;
+    max-width: 640px;
+  }
+  .masthead{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    margin-bottom: 18px;
+    padding: 0 4px;
+  }
+  .masthead h1{
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 1.15rem;
+    letter-spacing: 0.02em;
+    margin:0;
+    color: var(--text);
+  }
+  .masthead .tag{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .card{
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 36px 32px 30px;
+    box-shadow: 0 30px 60px -30px rgba(0,0,0,0.6);
+    position: relative;
+    overflow: hidden;
+  }
+  .progress-track{
+    height: 3px;
+    background: var(--line);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 26px;
+  }
+  .progress-fill{
+    height: 100%;
+    background: linear-gradient(90deg, var(--amber), #FFD37A);
+    width: 0%;
+    transition: width 0.4s ease;
+  }
+  .meta-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom: 22px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .meta-row .count strong{ color: var(--amber); }
+  .meta-row .score{ color: var(--mint); }
+  .question{
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 1.5rem;
+    line-height: 1.4;
+    margin: 0 0 26px;
+    color: var(--text);
+  }
+  .options{
+    display:flex;
+    flex-direction:column;
+    gap: 10px;
+  }
+  .option{
+    text-align:left;
+    background: var(--paper-light);
+    border: 1px solid var(--line);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.98rem;
+    padding: 14px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    display:flex;
+    align-items:center;
+    gap: 12px;
+    transition: border-color 0.15s ease, transform 0.1s ease, background 0.15s ease;
+  }
+  .option:hover{ border-color: rgba(255,177,48,0.5); }
+  .option:active{ transform: scale(0.99); }
+  .option .letter{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--muted);
+    width: 20px;
+    flex-shrink:0;
+  }
+  .option.correct{
+    border-color: var(--mint);
+    background: rgba(110,231,183,0.08);
+  }
+  .option.correct .letter{ color: var(--mint); }
+  .option.wrong{
+    border-color: var(--red);
+    background: rgba(248,113,113,0.08);
+  }
+  .option.wrong .letter{ color: var(--red); }
+  .option.disabled{ pointer-events:none; }
+  .option.dim{ opacity: 0.45; }
+
+  .next-btn{
+    margin-top: 24px;
+    width: 100%;
+    background: var(--amber);
+    color: #241705;
+    border: none;
+    padding: 13px 16px;
+    border-radius: 10px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.1s ease;
+  }
+  .next-btn.show{ opacity:1; pointer-events:auto; }
+  .next-btn:active{ transform: scale(0.98); }
+
+  /* ---- Results ---- */
+  .results{
+    text-align:center;
+    padding: 10px 4px;
+  }
+  .stamp{
+    width: 128px;
+    height: 128px;
+    border: 3px solid var(--amber);
+    border-radius: 50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    margin: 6px auto 22px;
+    transform: rotate(-8deg);
+    animation: stampIn 0.45s cubic-bezier(.2,1.4,.4,1) both;
+  }
+  @keyframes stampIn{
+    from{ transform: rotate(-8deg) scale(0.4); opacity:0; }
+    to{ transform: rotate(-8deg) scale(1); opacity:1; }
+  }
+  .stamp .num{
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 2.1rem;
+    color: var(--amber);
+    line-height:1;
+  }
+  .stamp .den{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .verdict{
+    font-family: 'Fraunces', serif;
+    font-size: 1.3rem;
+    margin: 0 0 8px;
+  }
+  .verdict-sub{
+    color: var(--muted);
+    font-size: 0.92rem;
+    margin: 0 0 26px;
+  }
+  .retry-btn{
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--text);
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+  .retry-btn:hover{ border-color: var(--amber); }
+
+  footer{
+    text-align:center;
+    margin-top: 18px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    opacity: 0.6;
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="masthead">
+    <h1>Quiz Hall</h1>
+    <span class="tag">General Knowledge</span>
+  </div>
+
+  <div class="card">
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+    <div id="quizView">
+      <div class="meta-row">
+        <span class="count">Question <strong id="qNum">1</strong>/<span id="qTotal">10</span></span>
+        <span class="score">Score: <span id="liveScore">0</span></span>
+      </div>
+      <p class="question" id="questionText">Loading...</p>
+      <div class="options" id="optionsList"></div>
+      <button class="next-btn" id="nextBtn">Next Question →</button>
+    </div>
+
+    <div id="resultsView" style="display:none;">
+      <div class="results">
+        <div class="stamp">
+          <div class="num" id="finalScore">0</div>
+          <div class="den">/ <span id="finalTotal">10</span> CORRECT</div>
+        </div>
+        <p class="verdict" id="verdictText">Well done!</p>
+        <p class="verdict-sub" id="verdictSub">You know your stuff.</p>
+        <button class="retry-btn" id="retryBtn">Take it again</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>Built with a single HTML file · edit QUESTIONS below to customize</footer>
+</div>
+
+<script>
+  // ---------------------------------------------------------
+  // EDIT THIS ARRAY TO CHANGE THE QUIZ CONTENT
+  // "answer" is the 0-based index of the correct option
+  // ---------------------------------------------------------
+  const QUESTIONS = [
+    {
+      q: "Which planet is known as the Red Planet?",
+      options: ["Venus", "Mars", "Jupiter", "Saturn"],
+      answer: 1
+    },
+    {
+      q: "What is the capital of Pakistan?",
+      options: ["Karachi", "Lahore", "Islamabad", "Peshawar"],
+      answer: 2
+    },
+    {
+      q: "Who wrote the play 'Romeo and Juliet'?",
+      options: ["Charles Dickens", "William Shakespeare", "Leo Tolstoy", "Mark Twain"],
+      answer: 1
+    },
+    {
+      q: "What is the chemical symbol for Gold?",
+      options: ["Go", "Gd", "Au", "Ag"],
+      answer: 2
+    },
+    {
+      q: "How many continents are there on Earth?",
+      options: ["5", "6", "7", "8"],
+      answer: 2
+    },
+    {
+      q: "Which ocean is the largest in the world?",
+      options: ["Atlantic", "Indian", "Arctic", "Pacific"],
+      answer: 3
+    },
+    {
+      q: "In which year did Pakistan gain independence?",
+      options: ["1945", "1947", "1950", "1952"],
+      answer: 1
+    },
+    {
+      q: "What is the fastest land animal?",
+      options: ["Lion", "Cheetah", "Horse", "Leopard"],
+      answer: 1
+    },
+    {
+      q: "Which gas do plants absorb from the atmosphere?",
+      options: ["Oxygen", "Nitrogen", "Carbon Dioxide", "Hydrogen"],
+      answer: 2
+    },
+    {
+      q: "What is the largest organ of the human body?",
+      options: ["Heart", "Liver", "Skin", "Lungs"],
+      answer: 2
+    }
+  ];
+  // ---------------------------------------------------------
+
+  let current = 0;
+  let score = 0;
+  let answered = false;
+
+  const qNum = document.getElementById('qNum');
+  const qTotal = document.getElementById('qTotal');
+  const liveScore = document.getElementById('liveScore');
+  const questionText = document.getElementById('questionText');
+  const optionsList = document.getElementById('optionsList');
+  const nextBtn = document.getElementById('nextBtn');
+  const progressFill = document.getElementById('progressFill');
+  const quizView = document.getElementById('quizView');
+  const resultsView = document.getElementById('resultsView');
+  const retryBtn = document.getElementById('retryBtn');
+
+  const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+  function renderQuestion(){
+    answered = false;
+    const item = QUESTIONS[current];
+    qNum.textContent = current + 1;
+    qTotal.textContent = QUESTIONS.length;
+    liveScore.textContent = score;
+    questionText.textContent = item.q;
+    progressFill.style.width = ((current) / QUESTIONS.length * 100) + '%';
+
+    optionsList.innerHTML = '';
+    item.options.forEach((opt, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'option';
+      btn.innerHTML = `<span class="letter">${letters[i]}</span><span>${opt}</span>`;
+      btn.addEventListener('click', () => selectOption(i, btn));
+      optionsList.appendChild(btn);
+    });
+
+    nextBtn.classList.remove('show');
+    nextBtn.textContent = current === QUESTIONS.length - 1 ? 'See Results →' : 'Next Question →';
+  }
+
+  function selectOption(i, btn){
+    if (answered) return;
+    answered = true;
+    const item = QUESTIONS[current];
+    const allOptions = optionsList.querySelectorAll('.option');
+
+    allOptions.forEach((el, idx) => {
+      el.classList.add('disabled');
+      if (idx === item.answer){
+        el.classList.add('correct');
+      } else if (idx === i){
+        el.classList.add('wrong');
+      } else {
+        el.classList.add('dim');
+      }
+    });
+
+    if (i === item.answer){
+      score++;
+      liveScore.textContent = score;
+    }
+
+    nextBtn.classList.add('show');
+  }
+
+  function nextQuestion(){
+    if (!answered) return;
+    current++;
+    if (current < QUESTIONS.length){
+      renderQuestion();
+    } else {
+      showResults();
+    }
+  }
+
+  function showResults(){
+    progressFill.style.width = '100%';
+    quizView.style.display = 'none';
+    resultsView.style.display = 'block';
+    document.getElementById('finalScore').textContent = score;
+    document.getElementById('finalTotal').textContent = QUESTIONS.length;
+
+    const pct = score / QUESTIONS.length;
+    const verdict = document.getElementById('verdictText');
+    const sub = document.getElementById('verdictSub');
+    if (pct === 1){
+      verdict.textContent = 'Perfect score!';
+      sub.textContent = 'You did not miss a single one.';
+    } else if (pct >= 0.7){
+      verdict.textContent = 'Well done!';
+      sub.textContent = 'You know your stuff.';
+    } else if (pct >= 0.4){
+      verdict.textContent = 'Decent effort.';
+      sub.textContent = 'A little more practice and you\'ll ace it.';
+    } else {
+      verdict.textContent = 'Keep at it.';
+      sub.textContent = 'Try again — you\'ll improve fast.';
+    }
+  }
+
+  function resetQuiz(){
+    current = 0;
+    score = 0;
+    quizView.style.display = 'block';
+    resultsView.style.display = 'none';
+    renderQuestion();
+  }
+
+  nextBtn.addEventListener('click', nextQuestion);
+  retryBtn.addEventListener('click', resetQuiz);
+
+  renderQuestion();
+</script>
+
+</body>
+</html>
